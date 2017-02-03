@@ -155,7 +155,11 @@ func (p *Post) LoadFromFile(f string) error {
 		}
 		if DateRE.Match(line) {
 			d := DateRE.ReplaceAllString(string(line), "$1")
-			p.Date, _ = time.Parse(time.RFC1123, d)
+			p.Date, err = time.Parse(time.RFC1123, d)
+			if err != nil {
+				log.Printf("error in '%s'\n", f)
+				log.Fatal(err)
+			}
 			fmt.Printf("Date: %s\n", p.Date)
 			useLine = false
 		}
