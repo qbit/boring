@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -265,9 +266,10 @@ func main() {
 	posts := Posts{}
 	for _, file := range files {
 		fn := file.Name()
-		srcFile := src + "/" + fn
-		dstFile := dst + "/" + md2html(fn)
-		post, err := renderPost(srcFile, fn)
+		srcFile := path.Join(src, fn)
+		dstFile := path.Join(dst, "/posts/", md2html(fn))
+		post, err := renderPost(srcFile, path.Join("/posts/", fn))
+		fmt.Println("-----")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -283,8 +285,8 @@ func main() {
 
 	sort.Sort(posts)
 
-	renderTemplate(dst+"/index.html", "index.html", posts)
-	renderTemplate(dst+"/about.html", "about.html", posts[0].Author)
-	renderTemplate(dst+"/contact.html", "contact.html", posts[0].Author)
-	renderTemplate(dst+"/archive.html", "archive.html", posts[5:])
+	renderTemplate(path.Join(dst, "/index.html"), "index.html", posts)
+	renderTemplate(path.Join(dst, "/about.html"), "about.html", posts[0].Author)
+	renderTemplate(path.Join(dst, "/contact.html"), "contact.html", posts[0].Author)
+	renderTemplate(path.Join(dst, "/archive.html"), "archive.html", posts[5:])
 }
