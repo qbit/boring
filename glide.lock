@@ -1,0 +1,10 @@
+hash: 83b61e3f32d25a66b5faa0922f14dd294a540f1b9918921aa73af340de31ad24
+updated: 2017-02-03T09:14:47.670780155-07:00
+imports:
+- name: github.com/russross/blackfriday
+  version: 0b647d0506a698cca42caca173e55559b12a69f2
+- name: github.com/shurcooL/sanitized_anchor_name
+  version: 10ef21a441db47d8b13ebcc5fd2310f636973c77
+- name: github.com/ylih/extrasys
+  version: 48c6a025836d8f4eb4ffd5470ceafcf140932118
+testImports: []

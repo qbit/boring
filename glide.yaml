@@ -1,0 +1,5 @@
+package: code.bolddaemon.com/qbit/boring
+import:
+- package: github.com/russross/blackfriday
+  version: ~1.4.0
+- package: github.com/ylih/extrasys
