@@ -1,5 +1,5 @@
 boring
-######
+======
 
 Static site generator written in go.
 
