@@ -272,7 +272,7 @@ func main() {
 		fn := file.Name()
 		srcFile := path.Join(src, fn)
 		dstFile := path.Join(dst, "/posts/", md2html(fn))
-		post, err := renderPost(srcFile, path.Join("/posts/", fn))
+		post, err := renderPost(srcFile, path.Join("posts/", fn))
 		fmt.Println("-----")
 		if err != nil {
 			log.Fatal(err)
