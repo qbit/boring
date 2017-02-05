@@ -3,3 +3,4 @@ import:
 - package: github.com/russross/blackfriday
   version: ~1.4.0
 - package: github.com/ylih/extrasys
+- package: github.com/gorilla/feeds

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	. "github.com/gorilla/feeds"
 	"github.com/russross/blackfriday"
 	// "github.com/ylih/extrasys"
 )
@@ -20,6 +21,13 @@ import (
 var templ *template.Template
 
 var funcMap = template.FuncMap{
+	"hasTitle": func(s string) bool {
+		ret := false
+		if s != "" {
+			ret = true
+		}
+		return ret
+	},
 	"formatDate": func(t time.Time) string {
 		return t.Format(time.RFC1123)
 	},
@@ -44,9 +52,10 @@ var funcMap = template.FuncMap{
 	},
 }
 
-type response struct {
-	User interface{}
-	Data interface{}
+type content struct {
+	Posts  Posts
+	Title  string
+	Author User
 }
 
 // AuthorRE is a regex to grab our Authors
@@ -107,7 +116,7 @@ func (u *User) Parse(s string) {
 
 // Combine concatenates FName, LName and Email into one line
 func (u *User) Combine() string {
-	return fmt.Sprintf("%s %s <%s>", u.FName, u.LName, u.Email)
+	return fmt.Sprintf("%s %s", u.FName, u.LName)
 }
 
 // Post is the base type for all posts
@@ -234,6 +243,7 @@ func renderTemplate(dst string, tmpl string, data interface{}) {
 
 	err = templ.ExecuteTemplate(o, tmpl, data)
 	if err != nil {
+		log.Println(dst)
 		log.Fatal(err)
 	}
 }
@@ -289,8 +299,57 @@ func main() {
 
 	sort.Sort(posts)
 
-	renderTemplate(path.Join(dst, "/index.html"), "index.html", posts)
-	renderTemplate(path.Join(dst, "/about.html"), "about.html", posts[0].Author)
-	renderTemplate(path.Join(dst, "/contact.html"), "contact.html", posts[0].Author)
-	renderTemplate(path.Join(dst, "/archive.html"), "archive.html", posts[5:])
+	renderTemplate(path.Join(dst, "/index.html"), "index.html", content{
+		Title: "",
+		Posts: posts,
+	})
+	renderTemplate(path.Join(dst, "/about.html"), "about.html", content{
+		Title:  "About",
+		Author: posts[0].Author,
+	})
+	renderTemplate(path.Join(dst, "/contact.html"), "contact.html", content{
+		Title:  "Contact",
+		Author: posts[0].Author,
+	})
+	renderTemplate(path.Join(dst, "/archive.html"), "archive.html", content{
+		Title: "Archive",
+		Posts: posts[5:],
+	})
+
+	// TODO variablize all of this and shove it in some kind of config
+
+	latestDate := posts[0].Date
+
+	feed := &Feed{
+		Title:       "deftly.net - All posts",
+		Link:        &Link{Href: "https://deftly.net/"},
+		Description: "Personal blog of Aaron Bieber",
+		Author:      &Author{Name: "Aaron Bieber", Email: "aaron@bolddaemon.com"},
+		Created:     latestDate,
+		Copyright:   "This work is copyright © Aaron Bieber",
+	}
+
+	for _, post := range posts {
+		var i = &Item{}
+		i.Title = post.Title
+		i.Description = string(post.Body)
+		i.Link = &Link{Href: "https://deftly.net" + post.URL}
+		i.Author = &Author{Name: post.Author.Combine(), Email: "aaron@bolddaemon.com"}
+		i.Created = post.Date
+
+		feed.Items = append(feed.Items, i)
+	}
+
+	atomFile, err := os.Create(path.Join(dst, "atom.xml"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rssFile, err := os.Create(path.Join(dst, "rss.xml"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	feed.WriteAtom(atomFile)
+	feed.WriteRss(rssFile)
 }
