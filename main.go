@@ -38,6 +38,9 @@ var funcMap = template.FuncMap{
 		return string(b)
 	},
 	"lop": func(p Posts, start, end int) Posts {
+		if len(p) < end {
+			return p
+		}
 		return p[start:end]
 	},
 	"joinTags": func(ts Tags) template.HTML {
@@ -311,10 +314,17 @@ func main() {
 		Title:  "Contact",
 		Author: posts[0].Author,
 	})
-	renderTemplate(path.Join(dst, "/archive.html"), "archive.html", content{
-		Title: "Archive",
-		Posts: posts[5:],
-	})
+	if len(posts) < 5 {
+		renderTemplate(path.Join(dst, "/archive.html"), "archive.html", content{
+			Title: "Archive",
+			Posts: posts,
+		})
+	} else {
+		renderTemplate(path.Join(dst, "/archive.html"), "archive.html", content{
+			Title: "Archive",
+			Posts: posts[5:],
+		})
+	}
 
 	// TODO variablize all of this and shove it in some kind of config
 
