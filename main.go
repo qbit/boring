@@ -2,17 +2,20 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	. "github.com/gorilla/feeds"
 	"github.com/russross/blackfriday"
 	// "github.com/ylih/extrasys"
@@ -259,107 +262,147 @@ func main() {
 	var err error
 	// extrasys.Pledge("stdio wpath rpath cpath", nil)
 
-	if len(os.Args) < 2 {
-		fmt.Println("Wrong number of arguments")
-		os.Exit(1)
-	}
+	var watch = flag.Bool("w", false, "Enable 'watch' mode. Requires 'wdir' and 'wcmd'.")
+	var watchDir = flag.String("wdir", "", "watch a directory for changes, run command when change happens.")
+	var watchCmd = flag.String("wcmd", "", "command to run when changes are detected in 'wdir'.")
 
-	src := os.Args[1]
-	tmpl := os.Args[2]
-	dst := os.Args[3]
+	flag.Parse()
 
-	templ, err = template.New("boring").Funcs(funcMap).ParseGlob(tmpl + "/*.html")
-	if err != nil {
-		log.Fatal(err)
-	}
+	if !*watch {
+		if len(os.Args) < 2 {
+			fmt.Println("Wrong number of arguments")
+			os.Exit(1)
+		}
 
-	log.Printf("Generating static html from %s to %s\n", src, dst)
+		src := os.Args[1]
+		tmpl := os.Args[2]
+		dst := os.Args[3]
 
-	files, err := ioutil.ReadDir(src)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	posts := Posts{}
-	for _, file := range files {
-		fn := file.Name()
-		srcFile := path.Join(src, fn)
-		dstFile := path.Join(dst, "/posts/", md2html(fn))
-		post, err := renderPost(srcFile, path.Join("posts/", fn))
-		fmt.Println("-----")
+		templ, err = template.New("boring").Funcs(funcMap).ParseGlob(tmpl + "/*.html")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		renderTemplate(dstFile, "default.html", struct {
-			Content Post
-		}{
-			post,
-		})
+		log.Printf("Generating static html from %s to %s\n", src, dst)
 
-		posts = append(posts, &post)
-	}
+		files, err := ioutil.ReadDir(src)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	sort.Sort(posts)
+		posts := Posts{}
+		for _, file := range files {
+			fn := file.Name()
+			srcFile := path.Join(src, fn)
+			dstFile := path.Join(dst, "/posts/", md2html(fn))
+			post, err := renderPost(srcFile, path.Join("posts/", fn))
+			fmt.Println("-----")
+			if err != nil {
+				log.Fatal(err)
+			}
 
-	renderTemplate(path.Join(dst, "/index.html"), "index.html", content{
-		Title: "",
-		Posts: posts,
-	})
-	renderTemplate(path.Join(dst, "/about.html"), "about.html", content{
-		Title:  "About",
-		Author: posts[0].Author,
-	})
-	renderTemplate(path.Join(dst, "/contact.html"), "contact.html", content{
-		Title:  "Contact",
-		Author: posts[0].Author,
-	})
-	if len(posts) < 5 {
-		renderTemplate(path.Join(dst, "/archive.html"), "archive.html", content{
-			Title: "Archive",
+			renderTemplate(dstFile, "default.html", struct {
+				Content Post
+			}{
+				post,
+			})
+
+			posts = append(posts, &post)
+		}
+
+		sort.Sort(posts)
+
+		renderTemplate(path.Join(dst, "/index.html"), "index.html", content{
+			Title: "",
 			Posts: posts,
 		})
-	} else {
-		renderTemplate(path.Join(dst, "/archive.html"), "archive.html", content{
-			Title: "Archive",
-			Posts: posts[5:],
+		renderTemplate(path.Join(dst, "/about.html"), "about.html", content{
+			Title:  "About",
+			Author: posts[0].Author,
 		})
+		renderTemplate(path.Join(dst, "/contact.html"), "contact.html", content{
+			Title:  "Contact",
+			Author: posts[0].Author,
+		})
+		if len(posts) < 5 {
+			renderTemplate(path.Join(dst, "/archive.html"), "archive.html", content{
+				Title: "Archive",
+				Posts: posts,
+			})
+		} else {
+			renderTemplate(path.Join(dst, "/archive.html"), "archive.html", content{
+				Title: "Archive",
+				Posts: posts[5:],
+			})
+		}
+
+		// TODO variablize all of this and shove it in some kind of config
+
+		latestDate := posts[0].Date
+
+		feed := &Feed{
+			Title:       "deftly.net - All posts",
+			Link:        &Link{Href: "https://deftly.net/"},
+			Description: "Personal blog of Aaron Bieber",
+			Author:      &Author{Name: "Aaron Bieber", Email: "aaron@bolddaemon.com"},
+			Created:     latestDate,
+			Copyright:   "This work is copyright © Aaron Bieber",
+		}
+
+		for _, post := range posts {
+			var i = &Item{}
+			i.Title = post.Title
+			i.Description = string(post.Body)
+			i.Link = &Link{Href: "https://deftly.net" + post.URL}
+			i.Author = &Author{Name: post.Author.Combine(), Email: "aaron@bolddaemon.com"}
+			i.Created = post.Date
+
+			feed.Items = append(feed.Items, i)
+		}
+
+		atomFile, err := os.Create(path.Join(dst, "atom.xml"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		rssFile, err := os.Create(path.Join(dst, "rss.xml"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		feed.WriteAtom(atomFile)
+		feed.WriteRss(rssFile)
+	} else {
+		// Watch mode
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer watcher.Close()
+
+		done := make(chan bool)
+		go func() {
+			for {
+				select {
+				case event := <-watcher.Events:
+					if event.Op&fsnotify.Write == fsnotify.Write {
+						log.Println("modified file:", event.Name)
+						c := exec.Command(*watchCmd)
+
+						if err := c.Run(); err != nil {
+							fmt.Println("Error: ", err)
+						}
+					}
+				case err := <-watcher.Errors:
+					log.Fatal(err)
+				}
+			}
+		}()
+
+		err = watcher.Add(*watchDir)
+		if err != nil {
+			log.Fatal(err)
+		}
+		<-done
 	}
-
-	// TODO variablize all of this and shove it in some kind of config
-
-	latestDate := posts[0].Date
-
-	feed := &Feed{
-		Title:       "deftly.net - All posts",
-		Link:        &Link{Href: "https://deftly.net/"},
-		Description: "Personal blog of Aaron Bieber",
-		Author:      &Author{Name: "Aaron Bieber", Email: "aaron@bolddaemon.com"},
-		Created:     latestDate,
-		Copyright:   "This work is copyright © Aaron Bieber",
-	}
-
-	for _, post := range posts {
-		var i = &Item{}
-		i.Title = post.Title
-		i.Description = string(post.Body)
-		i.Link = &Link{Href: "https://deftly.net" + post.URL}
-		i.Author = &Author{Name: post.Author.Combine(), Email: "aaron@bolddaemon.com"}
-		i.Created = post.Date
-
-		feed.Items = append(feed.Items, i)
-	}
-
-	atomFile, err := os.Create(path.Join(dst, "atom.xml"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	rssFile, err := os.Create(path.Join(dst, "rss.xml"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	feed.WriteAtom(atomFile)
-	feed.WriteRss(rssFile)
 }

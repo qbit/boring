@@ -4,3 +4,5 @@ import:
   version: ~1.4.0
 - package: github.com/ylih/extrasys
 - package: github.com/gorilla/feeds
+- package: github.com/fsnotify/fsnotify
+  version: ^1.4.2

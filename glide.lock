@@ -1,6 +1,8 @@
-hash: af0c2b0e7fd58c70a43dcf5c75b802f7a49c5d53ad6aec1975adfebe0acee206
-updated: 2017-02-04T09:25:07.785352554-07:00
+hash: aa963bb1783c6d48ae4d7001851c87e2abb46cfbcdfd8a4792dbe766b7fafcd3
+updated: 2017-02-27T10:22:14.549716708-07:00
 imports:
+- name: github.com/fsnotify/fsnotify
+  version: 629574ca2a5df945712d3079857300b5e4da0236
 - name: github.com/gorilla/feeds
   version: 441264de03a8117ed530ae8e049d8f601a33a099
 - name: github.com/russross/blackfriday
