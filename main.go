@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -18,7 +19,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	. "github.com/gorilla/feeds"
 	"github.com/russross/blackfriday"
-	// "github.com/ylih/extrasys"
 )
 
 var templ *template.Template
@@ -265,6 +265,7 @@ func main() {
 	var watch = flag.Bool("w", false, "Enable 'watch' mode. Requires 'wdir' and 'wcmd'.")
 	var watchDir = flag.String("wdir", "", "watch a directory for changes, run command when change happens.")
 	var watchCmd = flag.String("wcmd", "", "command to run when changes are detected in 'wdir'.")
+	var srvPort = flag.String("port", ":8080", "Port to serve the static files on.")
 
 	flag.Parse()
 
@@ -374,6 +375,18 @@ func main() {
 		feed.WriteRss(rssFile)
 	} else {
 		// Watch mode
+
+		go func() {
+			// Start a http server and serve the static dir
+			log.Printf("listening on https://localhost%s", *srvPort)
+			log.Fatal(
+				http.ListenAndServe(
+					*srvPort,
+					http.FileServer(http.Dir("static/")),
+				),
+			)
+		}()
+
 		watcher, err := fsnotify.NewWatcher()
 		if err != nil {
 			log.Fatal(err)
