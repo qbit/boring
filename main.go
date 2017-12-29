@@ -265,6 +265,7 @@ func main() {
 	var watch = flag.Bool("w", false, "Enable 'watch' mode. Requires 'wdir' and 'wcmd'.")
 	var watchDir = flag.String("wdir", "", "watch a directory for changes, run command when change happens.")
 	var watchCmd = flag.String("wcmd", "", "command to run when changes are detected in 'wdir'.")
+	var watchSrv = flag.String("wsrv", "", "Serve static files from specified directory.")
 	var srvPort = flag.String("port", ":8080", "Port to serve the static files on.")
 
 	flag.Parse()
@@ -378,11 +379,11 @@ func main() {
 
 		go func() {
 			// Start a http server and serve the static dir
-			log.Printf("listening on https://localhost%s", *srvPort)
+			log.Printf("serving '%s' on https://localhost%s", *watchSrv, *srvPort)
 			log.Fatal(
 				http.ListenAndServe(
 					*srvPort,
-					http.FileServer(http.Dir("static/")),
+					http.FileServer(http.Dir(*watchSrv)),
 				),
 			)
 		}()
