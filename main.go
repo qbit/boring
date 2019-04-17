@@ -140,7 +140,7 @@ type Post struct {
 
 // HTML returns converted MD to HTML
 func (p *Post) HTML() {
-	p.Body = blackfriday.MarkdownCommon(p.Body)
+	p.Body = blackfriday.Run(p.Body)
 }
 
 // LoadFromFile takes the File of a given page and loads the markdown for rendering
