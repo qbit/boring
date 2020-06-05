@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	. "github.com/gorilla/feeds"
+	"github.com/gorilla/feeds"
 	"github.com/russross/blackfriday"
 )
 
@@ -342,21 +342,21 @@ func main() {
 
 		latestDate := posts[0].Date
 
-		feed := &Feed{
+		feed := &feeds.Feed{
 			Title:       "deftly.net - All posts",
-			Link:        &Link{Href: "https://deftly.net/"},
+			Link:        &feeds.Link{Href: "https://deftly.net/"},
 			Description: "Personal blog of Aaron Bieber",
-			Author:      &Author{Name: "Aaron Bieber", Email: "aaron@bolddaemon.com"},
+			Author:      &feeds.Author{Name: "Aaron Bieber", Email: "aaron@bolddaemon.com"},
 			Created:     latestDate,
 			Copyright:   "This work is copyright © Aaron Bieber",
 		}
 
 		for _, post := range posts {
-			var i = &Item{}
+			var i = &feeds.Item{}
 			i.Title = post.Title
 			i.Description = string(post.Body)
-			i.Link = &Link{Href: "https://deftly.net" + post.URL}
-			i.Author = &Author{Name: post.Author.Combine(), Email: "aaron@bolddaemon.com"}
+			i.Link = &feeds.Link{Href: "https://deftly.net" + post.URL}
+			i.Author = &feeds.Author{Name: post.Author.Combine(), Email: "aaron@bolddaemon.com"}
 			i.Created = post.Date
 
 			feed.Items = append(feed.Items, i)
