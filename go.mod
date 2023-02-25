@@ -7,5 +7,5 @@ require (
 	github.com/gorilla/feeds v1.1.0
 	github.com/russross/blackfriday v2.0.0+incompatible
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	golang.org/x/sys v0.0.0-20190416152802-12500544f89f // indirect
+	golang.org/x/sys v0.1.0 // indirect
 )
