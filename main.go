@@ -18,7 +18,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/feeds"
-	"github.com/russross/blackfriday"
+	"github.com/russross/blackfriday/v2"
 )
 
 var templ *template.Template
